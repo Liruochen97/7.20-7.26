@@ -1,0 +1,163 @@
+##多重比较(找出哪两个组之间有区别)
+library(multcomp)
+attach(library(multcomp)
+attach(cholesterol)
+fit<-aov(response~trt)
+TukeyHSD(fit) ##根据p值判断差异的显著性
+plot(TukeyHSD(fit)) ##结果绘图，置信区间包含0代表p>0.05，差异不显著
+tuk<-glht(fit,lincft=mcp(trt="Tukey")) ##glht()函数进行Tukey HSD检验
+plot(cld(tuk,level=0.05)))
+fit<-aov(response~trt)
+TukeyHSD(fit) ##根据p值判断差异的显著性
+plot(TukeyHSD(fit)) ##结果绘图，置信区间包含0代表p>0.05，差异不显著
+##glht()函数也可进行Tukey HSD检验
+library(car)
+##评估检验的假设条件
+qqPlot(lm(response~trt,data=cholesterol),simulate=TRUE,main="Q~Q Plot",lables=FALSE) ##用95%置信区间的正态分布评估检验的假设条件
+bartlett.test(response~trt,data=cholesterol) ##检验方差齐性，看p值大小（越大越不显著）看组间方差显著与否
+outlierTest(fit) ##检测离群点，根据此三个指标大致判断模型拟合得怎么样
+##单因素协方差分析
+library(multcomp)
+attach(litter)
+table(dose)
+aggregate(weight,by=list(dose),FUN=mean)
+fit<-aov(weight~gesttime+dose) ##检验体重与怀孕时间和控制怀孕时间后与剂量之间的相关性
+summary(fit)
+library(effects)
+effect("dose",fit) ##去除协变量效应后的调整均值
+contrast<-rbind("no drug vs. drug"=c(3,-1,-1,-1)) ##设置第一组为对照和其他三组比较
+summary(glht(fit,linfct=mcp(dose=contrast))) ##比较自定义的用药和未用药之间的差异是否显著
+##可使用ANOVA分析中评估检验的三种方式评估检验，另还需检查回归斜率同质性(通过检查协变量和响应变量之间的交互效应来实现)
+summary(aov(weight~gesttime*dose,data=litter)) ##交互效应不显著则支持斜率相等的假设，否则需变换变量或换模型或使用非参数ANCOVA方法
+##结果可视化
+library(HH)
+ancova(weight~gesttime+dose,data=litter) ##回归直线平行，截距不同
+ancova(weight~gesttime+dose,data=litter) ##允许斜率与截距都不同
+##双因素方差分析
+attach(ToothGrowth)
+table(supp,dose)
+dose<-factor(dose) ##将剂量变量转换为因子型变量，将其作为分组变量而非协变量
+fit<-aov(len~supp*dose)
+summary(fit) ##得到方差分析表
+##结果可视化
+interaction.plot(dose,supp,len,type="b",col=c("red","blue"),main="Interaction between Dose and Supp") 
+library(HH)
+interaction2wt(len~supp*dose)
+##多元方差分析（因变量不止一个）
+library(MASS)
+attach(UScereal)
+shelf<-factor(shelf)
+y<-cbind(calories,fat,sugars)
+fit<-manova(y~shelf) ##检测三个测量值是否因货架不同而发生变化
+summary.aov(fit) ##分别展示三个测量值
+detach(UScereal)
+##不满足假设可尝试稳健多元方差分析，检测是否对违反假设或离群点的情况敏感
+#############################################################
+##绘图部分
+##数据塑形
+newt<-subset(ToothGrowth,select=-dose) ##显示去除"dose"列的数据框
+newt<-subset(ToothGrowth,select=c(-supp,-dose)) ##去除supp和dose列
+ToothGrowth$supp<-NULL ##删除ToothGrowth数据框中的supp列
+##重排序数据框中的列
+UScereal<-UScereal[c(1,3,2)] ##根据列的位置重新排序
+UScereal<-UScereal[c("protein","calories","mfr")] ##根据列的名称重新排序
+##根据数据值改变因子水平的顺序
+iss<-InsectSprays
+iss$spray<-reorder(iss$spray,iss$count,FUN=mean) ##根据count值的平均值给因子重新排序
+iss$spray<-reorder(iss$spray,iss$count,FUN=median) ##根据count值的中位数给因子重新排序
+##重命名因子名称
+library(plyr)
+s<-factor(c("small","large","large","medium","small"))
+levels(s) ##查看因子水平
+s1<-revalue(s,c(small="s",medium="m",large="l")) ##因子重命名,revalue函数还可以重名名向量中元素的名称
+s2<-mapvalues(s,c("small","large","medium"),c("s","m","l")) ##使用两组向量
+##删除不需要的因子水平
+s3<-s[1:3]
+s3<-droplevels(s3) 
+##把一个分类变量转化为另一个
+pg<-PlantGrowth[c(1,2,11,21,22),]
+old<-c("ctrl","trt1","trt2")
+new<-c("yes","no","no")
+pg$treatment<-new[match(pg$group,old)] ##使用match函数重命名因子并赋值到新建的treatment列中
+##连续变量转换为分类变量
+pg$wtclass<-cut(pg$weight,breaks=c(0,5,6,Inf),lables=c("small","medium","large")) ##Inf代表无穷大，分正负，cut函数生成的范围为因子型变量
+##按组转换数据
+library(MASS)
+cb<-ddply(cabbages,c("Cult","Date"),transform,devvitc=VitC-mean(VitC)) ##将cabbages数据集按照"Cult","Date"这两个因子分组，并调用transform函数，新增devvtic列用来存储标准化后的VitC值
+##分组汇总数据
+ddply(cabbages,c("Cult","Date"),summarise,weight=mean(HeadWt)) ##组别没有则只有一个均值，组别只有一个则罗列按该组别分组的各组平均值，也可计算多个变量，包括标准差sd()、频数length()、min()、max()、median()
+##处理缺失值
+c1<-cabbages
+c1$HeadWt[c(2,4,20)]<-NA ##将某些值赋值为缺失值
+ddply(c1,c("Cult","Date"),summarise,weight=mean(HeadWt),sd=sd(HeadWt),n=length(HeadWt)) ##会发现有缺失值，可做如下改进
+ddply(c1,c("Cult","Date"),summarise,weight=mean(HeadWt,na.rm=TRUE),sd=sd(HeadWt,na.rm=TRUE),n=length(HeadWt),n1=sum(!is.na(HeadWt))) ##计算时将缺失值移除，返回用来计算的观测个数
+##组合缺失
+c2<-subset(c1,!(Cult=="c52"&Date=="d21")) ##移除某组
+c2a<-ddply(c2,c("Cult","Date"),summarise,weight=mean(HeadWt,na.rm=TRUE),sd=sd(HeadWt,na.rm=TRUE),n1=sum(!is.na(HeadWt))) 
+library(ggplot2)
+##ggplot(c2a, aes(x=Date, fill=Cult, y=weight))+geom_bar(position="dodge") ##绘图结果不理想，所以需要填充缺失组合
+c2b<-ddply(c2,c("Cult","Date"),.drop=FALSE,summarise,weight=mean(HeadWt,na.rm=TRUE),sd=sd(HeadWt,na.rm=TRUE),n=length(HeadWt),n1=sum(!is.na(HeadWt))) ##使用.drop=FALSE填充缺失组
+##ggplot(c2b,aes(x=Date,fill=Cult,y=weight))+geom_bar(position="dodge") ##绘图结果正确
+##使用标准误差和置信区间汇总数据
+library(MASS)
+library(plyr)
+ca<-ddply(cabbages,c("Cult","Date"),summarise,weight=mean(HeadWt,na.rm=TRUE),sd=sd(HeadWt,na.rm=TRUE),n=sum(!is.na(HeadWt)),se=sd/sqrt(n))##标准误差为标准差除以样本数的平方根
+ca$ci<-ca$se*qt(.975,ca$n-1) ##绘制95%的置信区间，为标准误差乘0.975分位数（给定概率值和自由度，自由度即样本数减1），99置信区间为0.995
+##绘制散点图
+plot(mtcars$wt,mtcars$mpg)
+library(ggplot2)
+qplot(mtcars$wt,mtcars$mpg) ##使用ggplot2包绘制相同图形,不能用attach
+ggplot(mtcars,aes(x=wt,y=mpg))+geom_point() ##两个参数向量包含在一个数据框中时可使用
+##绘制折线图
+plot(pressure$temperature,pressure$pressure,type="l") ##绘制折线图
+points(pressure$temperature,pressure$pressure) ##添加点
+lines(pressure$temperature,pressure$pressure/2,col="red") ##添加线
+points(pressure$temperature,pressure$pressure/2) ##添加第二条线的点
+qplot(pressure$temperature,pressure$pressure,geom="line") ##使用ggplot2包绘制折线图
+ggplot(pressure,aes(x=temperature,y=pressure))+geom_line() ##同上
+qplot(pressure$temperature,pressure$pressure,geom=c("line","point")) ##绘制点和线 
+ggplot(pressure,aes(x=temperature,y=pressure))+geom_line()+geom_point() ##同上
+##绘制条形图
+barplot(BOD$demand,names.arg=BOD$time) ##绘制BOD数据集中time的demand值条形图，以元素名为条形标签
+barplot(table(mtcars$cyl)) ##绘制mtcars中cyl的频数直方图
+ggplot(BOD,aes(x=Time,y=demand))+geom_bar(stat="identity")  ##绘制BOD数据集中time的demand值条形图，x离散取值
+ggplot(mtcars,aes(factor(cyl)))+geom_bar() ##绘制mtcars中cyl的频数直方图,将cyl转化为因子型变量后绘图
+##绘制直方图
+hist(mtcars$mpg)
+hist(mtcars$mpg,breaks=10) ##使用更多分组
+qplot(mtcars$mpg)
+qplot(mpg,data=mtcars,binwidth=4) ##组间距更大
+ggplot(mtcars,aes(x=mpg))+geom_histogram(binwidth=4) ##同上
+##绘制箱线图
+plot(ToothGrowth$supp,ToothGrowth$len) ##两个参数x,y,x为因子型变量时默认绘制箱线图
+boxplot(len~supp,data=ToothGrowth) ##两个参数包含在同一个数据框时可使用
+boxplot(len~supp+dose,data=ToothGrowth) ##x中加入两变量的交互
+library(ggplot2)
+qplot(supp,len,data=ToothGrowth,geom="boxplot") 
+ggplot(ToothGrowth,aes(supp,len))+geom_boxplot()
+ToothGrowth$dose<-factor(ToothGrowth$dose)
+qplot(interaction(supp,dose),len,data=ToothGrowth,geom="boxplot") ##使用interaction函数绘制基于多个分组变量的箱线图，绘制前需将所有分组变量转化为因子型
+ggplot(ToothGrowth,aes(interaction(supp,dose),len))+geom_boxplot() ##同上
+##绘制函数图像
+curve(x^3-5*x,from=-4,to=4) ##绘制从-4到4的x^3-5*x的函数图像
+myfun<-function(xvar){
+1/(1+exp(-xvar+10))
+}
+curve(myfun(x),from=0,to=20) ##绘制自定义函数图像
+curve(1-myfun(x),add=TRUE,col="red") ##使用add=TRUE添加线
+ggplot(data.frame(x=c(0,20)),aes(x))+stat_function(fun=myfun,geom="line")
+ggplot(data.frame(x=c(0,20)),aes(x))+geom_line(fun=myfun,stat="function") ##同上
+##绘制简单条形图
+ggplot(BOD,aes(Time,demand))+geom_bar(stat="identity") ##x为连续型（数值型）变量
+ggplot(BOD,aes(factor(Time),demand))+geom_bar(stat="identity") ##将x转化为离散型（因子型）变量
+ggplot(BOD,aes(factor(Time),demand))+geom_bar(stat="identity",fill="lightblue",colour="black") ##设置填充颜色与边框颜色 
+##绘制簇状条形图
+library(gcookbook)
+ggplot(cabbage_exp,aes(Date,Weight,fill=Cultivar))+geom_bar(position="dodge",stat="identity") ##绘制簇状统计图，若无position="dodge"语句则为堆积图
+##绘制频数条形图
+ggplot(diamonds,aes(x=cut))+geom_bar() ##绘制diamonds数据集中cut组的频数，不向y传参，x为离散型变量
+ggplot(diamonds,aes(x=carat))+geom_bar() ##绘制carat组的频数，x为连续型变量，结果为直方图
+##条形图着色
+upc<-subset(uspopchange,rank(Change)>40) ##选取Change大于40的数据
+ggplot(upc,aes(x=Abb,y=Change,fill=Region))+geom_bar(stat="identity") ##默认颜色
+ggplot(upc,aes(x=Abb,y=Change,fill=Region))+geom_bar(stat="identity",colour="black")+scale_fill_manual(values=c("#669933","#FFCC66"))+xlab("State") ##重新设定颜色
